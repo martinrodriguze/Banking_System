@@ -1,0 +1,228 @@
+import random
+import sqlite3
+
+conn = sqlite3.connect('card.s3db')
+c = conn.cursor()
+c.execute('CREATE TABLE IF NOT EXISTS card(id INTEGER, number TEXT, pin TEXT, balance INTEGER DEFAULT 0)')
+conn.commit()
+id = 0
+balance = 0
+
+
+class bankingSys:
+    global balance
+
+    def start(self):
+        print("1. Create an account\n2. Log into account\n0. Exit")
+        n = int(input())
+        if n == 1:
+            self.create_account()
+        elif n == 2:
+            self.log_account()
+        elif n == 0:
+            self.end()
+        else:
+            print("Wrong Choice!!")
+        self.start()
+
+    def create_account(self):
+        global id
+        i = 0
+        while i == 0:
+            x = (random.randint(1000000000, 9999999999))
+            z = '400000' + str(x)
+            n = list(z)
+            check_sum = [int(a) for a in n]
+            cc_num = [int(a) for a in n]
+            cc_num.pop(15)
+            cc_num_1 = []
+            i = 0
+            for n in cc_num:
+                if i % 2 != 0:
+                    cc_num_1.append(n)
+                    i += 1
+                else:
+                    b = n * 2
+                    cc_num_1.append(b)
+                    i += 1
+            cc_num_2 = [a if a <= 9 else a-9 for a in cc_num_1]
+            cc_num_sum = sum(cc_num_2)
+            result = (cc_num_sum + check_sum[15]) % 10
+            if result != 0:
+                i = 0
+        print('Your card has been created\nYour card number:')
+        z = '400000' + str(x)
+        print(z)
+        y= str(random.randint(1000, 9999))
+        print('Your card PIN:')
+        print(y)
+        cardno_pin.update({z: y})
+        number = z
+        pin = y
+        id = id + 1
+        c.execute('INSERT INTO card (id,number, pin,balance) VALUES (?, ?, ?, ?)',(id,number, pin,balance))
+        conn.commit()
+        self.start()
+
+    def log_account(self):
+        global x1, y1
+        a = int(input('Enter your card number:'))
+        b = int(input('Enter your PIN:'))
+        c.execute("SELECT number FROM card WHERE number=:number",{'number': a})
+        conn.commit()
+        r = c.fetchone()
+        if r != None:
+            x1 = int(r[0])
+            #print(x1)
+            c.execute("SELECT pin FROM card WHERE pin=:pin",{'pin': b})
+            conn.commit()
+            r1 = c.fetchone()
+            if r1 != None:
+                y1 = int(r1[0])
+                #print(y1)
+                if x1 == a:
+                    if y1 == b:
+                        print("You have successfully logged in!")
+                        a1.accounts()
+                    else:
+                        print('Wrong card number or PIN!')
+                        a1.start()
+                else:
+                    print('Wrong card number or PIN!')
+                    a1.start()
+            else:
+                    print('Wrong card number or PIN!')
+                    a1.start()
+        else:
+            print('Wrong card number or PIN!')
+            a1.start()
+
+    def accounts(self):
+        print("1. Balance\n2. Add income\n3. Do transfer\n4. Close account\n5. Log out\n0. Exit")
+        i = int(input())
+        if i == 1:
+            self.balance_g()
+        elif i == 2:
+            self.income_g()
+        elif i == 3:
+            self.transfer_g()
+        elif i == 4:
+            self.close_g()
+        elif i == 5:
+            print('You have successfully logged out!')
+            self.start()
+        elif i == 0:
+            self.end()
+
+    def end(self):
+        print('Bye!')
+        exit()
+
+    def balance_g(self):
+        c.execute("SELECT balance FROM card WHERE number=:number "
+                  "AND pin=:pin",{'balance':balance,'number':x1, 'pin':y1})
+        conn.commit()
+        b1 = c.fetchone()
+        b2 = int(b1[0])
+        print(b2)
+        self.accounts()
+
+    def income_g(self):
+        income = int(input('Enter income:'))
+        c.execute("SELECT balance FROM card WHERE number=:number "
+                  "AND pin=:pin",{'balance':balance,'number':x1, 'pin':y1})
+        conn.commit()
+        r3 = c.fetchone()
+        r4 = int(r3[0])
+        add_balance = r4 + income
+        c.execute("""UPDATE card SET  balance=:balance WHERE number=:number 
+                  AND pin=:pin""",{'balance':add_balance,'number':x1, 'pin':y1})
+        conn.commit()
+        r2 = c.fetchall()
+        #print(r2)
+        print('Income was added!')
+        self.accounts()
+
+
+    def transfer_g(self):
+         with conn:
+                print('Transfer')
+                #c_trans = input('Enter card number:')
+                res,c_trans = self.luhn_algo()
+                if res == 0:
+                    #print(c_trans)
+                    e = c.execute("SELECT number FROM card WHERE number=:number",{'number':c_trans})
+                    conn.commit()
+                    e1 = c.fetchone()
+                    if e1 != None:
+                        e11 = int(e1[0])
+                        if x1  == e11:
+                            print("You can't transfer money to the same account!")
+                            self.accounts()
+                        elif res == 0:
+                            trans_amt = int(input('Enter how much money you want to transfer:'))
+                            e2 = c.execute("SELECT balance FROM card WHERE number=:number",{'balance':balance,'number':x1})
+                            conn.commit()
+                            e22 = c.fetchone()
+                            e222 = int(e22[0])
+                            #print(e222)
+                            if trans_amt < e222:
+                                cur_balance = e222 - trans_amt
+                                e3 = c.execute("SELECT balance FROM card WHERE number=:number",{'balance':balance,'number':c_trans})
+                                conn.commit()
+                                e33 = c.fetchone()
+                                e333 = int(e33[0])
+                                upd_balance = e333 + trans_amt
+                                c.execute("UPDATE card SET balance=:balance WHERE number=:number"
+                                        ,{'balance':cur_balance,'number':x1})
+                                c.execute("UPDATE card SET balance=:balance WHERE number=:number",
+                                          {'balance':upd_balance,'number':c_trans})
+                                conn.commit()
+                                print("Success!")
+                                self.accounts()
+                            else:
+                                print("Not enough money!")
+                                self.accounts()
+                    else:
+                        print("Such a card does not exist")
+                        self.accounts()
+                else:
+                    print('Probably you made mistake in the card number. Please try again!')
+                    self.accounts()
+
+    def close_g(self):
+        c.execute("DELETE FROM card WHERE number=:number"
+                 ,{'number':x1})
+        conn.commit()
+        print('The account has been closed!')
+        self.start()
+
+    def luhn_algo(self):
+        n = input('Enter card number:')
+        check_sum = [ int(a) for a in n]
+        cc_num = [int(a) for a in n] # list conv into numbers
+        #print(cc_num)
+        cc_num.pop(15) # dropping last number
+        #print(cc_num)
+        cc_num_1 = [] # multiply by 2
+        i = 0
+        for k in cc_num:
+            if i%2 != 0:
+                cc_num_1.append(k)
+                i += 1
+            else:
+                b = k * 2
+                cc_num_1.append(b)
+                i += 1
+        #print(cc_num_1)
+        cc_num_2 = [a if a <= 9 else a-9 for a in cc_num_1]#  subsract by 9 over 9 numbers
+        #print(cc_num_2)
+        cc_num_sum = sum(cc_num_2)
+        #print(cc_num_sum)
+        #print(check_sum[15])
+        result = (cc_num_sum + check_sum[15]) % 10
+        #print(result)
+        return result,n
+cardno_pin = {}
+a1 = bankingSys()
+a1.start()
